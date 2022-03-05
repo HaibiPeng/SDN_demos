@@ -46,7 +46,9 @@
     ![A single-switch topology with 10 hosts](pictures/single.png)
 
 ##### 2. A linear topology of 5 switches and 5 hosts.
-* command used: 
+* The linear topology means ***m*** switches are connected in a line, with each switch has ***n*** hosts connected to it, which also indicate that the total number of hosts should be ***mn***. The parameter ***n*** equals to 1 by default. In this case, 5 switches and 5 hosts means each switch has only 1 host attached to it.
+
+* command used:
     ```bash
     $ sudo mn --topo linear,5
     ```
@@ -85,9 +87,10 @@
 ![A linear topology of 5 switches and 5 hosts](pictures/linear.png)
 
 ##### 3. A tree topology depth 3 fanout 2.
+* The tree topology means the topology is like a binary tree. The depth represents the number of layers of the tree. And the fanout represents the number of hosts attached to each switch of the last layer of the tree.
 * command used: 
     ```bash
-    $ sudo mn --topo linear,5
+    $ sudo mn --topo tree,depth=3,fanout=2
     ```
 * output:
     ```bash
