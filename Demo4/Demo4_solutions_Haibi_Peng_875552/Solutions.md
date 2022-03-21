@@ -24,6 +24,10 @@ As the requirement said, we need to add a flow rule at the switch connected to t
     ```bash
     $ sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 priority=40000,icmp,nw_src=10.0.0.3,nw_dst=10.0.0.2,action=drop
     ```
+    or run ***task3.1.1.sh*** directly with:
+    ```bash
+    $ sudo bash task3.1.1.sh
+    ```
 * output:
     ```
     haibipeng@ubuntu:~$ sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 priority=40000,icmp,nw_src=10.0.0.3,nw_dst=10.0.0.2,action=drop
@@ -39,14 +43,17 @@ As the requirement said, we need to add a flow rule at the switch connected to t
     --- 10.0.0.2 ping statistics ---
     1 packets transmitted, 0 received, 100% packet loss, time 0ms
     ```
+* wireshark:
+    ![](pictures/task3.1.1.png)
 
 ##### • Create the second flow rule to block the traﬃc to the "Red" namespace.
 
 As the requirement said, we need to add a flow rule at the switch connected to the "Red" namespace(10.0.0.2), which is br-1, to tell it to drop all kinds of packets from all other namespaces.
 
 * command used: 
+   run ***task3.1.2.sh*** directly with:
     ```bash
-    $ sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 priority=40000,nw_dst=10.0.0.2,action=drop
+    $ sudo bash task3.1.2.sh
     ```
 * output:
     ```
@@ -66,6 +73,8 @@ As the requirement said, we need to add a flow rule at the switch connected to t
     --- 10.0.0.2 ping statistics ---
     1 packets transmitted, 0 received, 100% packet loss, time 0ms
     ```
+* wireshark:
+    ![](pictures/task3.1.2.png)
 
 
 ##### • Create the third flow rule to allow total access to the "Red" namespace from the "Green" and the “Blue" namespaces.
@@ -103,6 +112,8 @@ As the requirement said, we need to add a flow rule at the switch connected to t
     1 packets transmitted, 1 received, 0% packet loss, time 0ms
     rtt min/avg/max/mdev = 8.234/8.234/8.234/0.000 ms
     ```
+* wireshark:
+    ![](pictures/task3.1.3.png)
 
 
 ##### • Do you need to delete the second flow rule to activate the third flow rule?
@@ -125,19 +136,28 @@ First, based on the conclusion of question 4, we can first block all kinds of tr
     # block all kinds of packets
     sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 ip,nw_dst=10.0.0.2,action=drop
     sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 ipv6,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 icmp,nw_dst=10.0.0.2,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 icmp6,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 tcp,nw_dst=10.0.0.2,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 tcp6,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 udp,nw_dst=10.0.0.2,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 udp6,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 sctp,nw_dst=10.0.0.2,action=drop
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 sctp6,action=drop
     sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 arp,nw_dst=10.0.0.2,action=drop
     sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 rarp,nw_dst=10.0.0.2,action=drop
     sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 mpls,action=drop
     sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 mplsm,action=drop
 
     # only all http/https traffic(tcp, port 80 and 443)
-    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 tcp,tcp_src=80/443,tcp_dst=80/443,nw_dst=10.0.0.2,action=all
+    sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-1 tcp,tcp_dst=80/443,nw_dst=10.0.0.2,action=all
 
-    #
+    # check flow entry
     sudo ovs-ofctl --protocols=OpenFlow13 dump-flows br-1
 
-    # test, e.g., icmp packets
-    sudo ip netns exec green ping -c 1 10.0.0.2
+    # test, e.g., icmp and http packets
+    sudo ip netns exec blue ping -c 1 10.0.0.2
+    sudo ip netns exec blue curl -m 10 10.0.0.2
     ```
 
 * command used: 
@@ -167,6 +187,8 @@ First, based on the conclusion of question 4, we can first block all kinds of tr
 
     --- 10.0.0.2 ping statistics ---
     1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+    curl: (7) Failed to connect to 10.0.0.2 port 80: Connection refused
     ```
 
 
