@@ -17,7 +17,7 @@ function attach_ns_to_ovs() {
 echo "Attaching the namespace $1 to the OVS $2"
 ip link add $3 type veth peer name $4
 ip link set $3 netns $1
-ovs-vsctl add-port $2 $4 -- set Interface $4 ofport_request=$5
+ovs-vsctl add-port $2 $4 tag=$7 -- set Interface $4 ofport_request=$5
 ip netns exec $1 ip addr add $6/24 dev $3
 ip netns exec $1 ip link set dev $3 up
 ip link set $4 up
@@ -59,8 +59,11 @@ function add_linear() {
     do
         create_ns "ns-$i"
         # attach ns to ovs
-        attach_ns_to_ovs "ns-$i" "br-$switch" "veth-ns-$i" "veth-ns-$i-br" 2 "10.0.0.$i"
+        if (( $i % $ns_per_switch == 1 )); then
+            attach_ns_to_ovs "ns-$i" "br-$switch" "veth-ns-$i" "veth-ns-$i-br" 2 "10.0.0.$i" 1
+        fi
         if (( $i % $ns_per_switch == 0 )); then
+            attach_ns_to_ovs "ns-$i" "br-$switch" "veth-ns-$i" "veth-ns-$i-br" 2 "10.0.0.$i" 2
             switch=$(($switch+1))
         fi
     done

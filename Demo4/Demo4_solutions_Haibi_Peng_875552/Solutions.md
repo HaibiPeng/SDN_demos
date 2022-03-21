@@ -298,61 +298,141 @@ I used similar code from Demo_2_3 to create a linear topology as described in qu
 
 ##### • After creating this topology, you are asked to create two slices, “Red" and “Blue", each slice is totally separated from the other without any toleration for shared access between them. To do that, you may write a shell script or a python-based code, your code must be well-commented and following coding principles and naming conventions. Your solution may leverage OVS’s CLI to create the necessary flow rules. Note that all hosts are in the same network range.
 
-As question 2 describes, I wrote a shell script to create a rule, which is to block the packets from ns-1, 3, 5, 7, 9 to ns-2, 4, 6, 8, 10 and vice versa.
+As question 2 describes, I wrote a shell script to assign VLAN tags to network interfaces, resulting in traffic isolation between namespaces[[2](#vlan)].
 
 * shell script
     ```bash
     #!/usr/bin/env bash
 
-    for (( i=1; i<=5; i++))
-    do
-        for (( j=1; j<=5; j++))
-        do
-            sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-$i priority=40000,icmp,nw_src=10.0.0.$((2*$i)),nw_dst=10.0.0.$((2*$j-1)),action=drop
-            sudo ovs-ofctl --protocols=OpenFlow13 add-flow br-$i priority=40000,icmp,nw_src=10.0.0.$((2*$i-1)),nw_dst=10.0.0.$((2*$j)),action=drop
-        done
-    done
+    ovs-vsctl set port veth-ns-1-br tag=1
+    ovs-vsctl set port veth-ns-3-br tag=1
+    ovs-vsctl set port veth-ns-5-br tag=1
+    ovs-vsctl set port veth-ns-7-br tag=1
+    ovs-vsctl set port veth-ns-9-br tag=1
 
-    # check flow entries of e.g., br-1
-    sudo ovs-ofctl --protocols=OpenFlow13 dump-flows br-1
-    # ping failed
-    sudo ip netns exec ns-1 ping -c 1 10.0.0.2
-    # ping successful
-    sudo ip netns exec ns-1 ping -c 1 10.0.0.3
+    ovs-vsctl set port veth-ns-2-br tag=2
+    ovs-vsctl set port veth-ns-4-br tag=2
+    ovs-vsctl set port veth-ns-6-br tag=2
+    ovs-vsctl set port veth-ns-8-br tag=2
+    ovs-vsctl set port veth-ns-10-br tag=2
     ```
 
 * command used: 
     ```bash
     $ sudo bash slice1.sh
     ```
-* output:
-    ```
-    haibipeng@ubuntu:~/Downloads/SDN_demos/Demo4/Demo4_solutions_Haibi_Peng_875552/scripts$ sudo bash slice1.sh
-    cookie=0x100005017764e, duration=4005.662s, table=0, n_packets=39, n_bytes=3822, send_flow_rem priority=5,ip actions=CONTROLLER:65535,clear_actions
-    cookie=0x10000f01e8595, duration=4005.662s, table=0, n_packets=1294, n_bytes=182454, send_flow_rem priority=40000,dl_type=0x8942 actions=CONTROLLER:65535,clear_actions
-    cookie=0x100007451cdfa, duration=4005.662s, table=0, n_packets=1294, n_bytes=182454, send_flow_rem priority=40000,dl_type=0x88cc actions=CONTROLLER:65535,clear_actions
-    cookie=0x100008dac7183, duration=4005.643s, table=0, n_packets=25, n_bytes=1050, send_flow_rem priority=40000,arp actions=CONTROLLER:65535,clear_actions
-    cookie=0x0, duration=1.007s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.2,nw_dst=10.0.0.1 actions=drop
-    cookie=0x0, duration=0.984s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.1,nw_dst=10.0.0.2 actions=drop
-    cookie=0x0, duration=0.961s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.2,nw_dst=10.0.0.3 actions=drop
-    cookie=0x0, duration=0.939s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.1,nw_dst=10.0.0.4 actions=drop
-    cookie=0x0, duration=0.919s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.2,nw_dst=10.0.0.5 actions=drop
-    cookie=0x0, duration=0.898s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.1,nw_dst=10.0.0.6 actions=drop
-    cookie=0x0, duration=0.878s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.2,nw_dst=10.0.0.7 actions=drop
-    cookie=0x0, duration=0.858s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.1,nw_dst=10.0.0.8 actions=drop
-    cookie=0x0, duration=0.838s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.2,nw_dst=10.0.0.9 actions=drop
-    cookie=0x0, duration=0.817s, table=0, n_packets=0, n_bytes=0, priority=40000,icmp,nw_src=10.0.0.1,nw_dst=10.0.0.10 actions=drop
+
+After adding VLAN tags, the traffic between ns-1, 3, 5, 7, 9 and ns-2, 4, 6, 8, 10 should be isolated. However, it didn't work and I didn't figure out why.
+
+* test output:
+    ```bash
+    haibipeng@ubuntu:~/Downloads/SDN_demos/Demo4/Demo4_solutions_Haibi_Peng_875552/scripts$ sudo ovs-vsctl show
+    c435d326-9feb-467a-81fd-e82ed3963b44
+        Bridge br-3
+            Controller "tcp:172.17.0.2:6653"
+                is_connected: true
+            Port br-ovs3-2
+                Interface br-ovs3-2
+            Port br-ovs3-4
+                Interface br-ovs3-4
+            Port veth-ns-5-br
+                tag: 1
+                Interface veth-ns-5-br
+            Port veth-ns-6-br
+                tag: 2
+                Interface veth-ns-6-br
+            Port br-3
+                Interface br-3
+                    type: internal
+        Bridge br-2
+            Controller "tcp:172.17.0.2:6653"
+                is_connected: true
+            Port veth-ns-3-br
+                tag: 1
+                Interface veth-ns-3-br
+            Port veth-ns-4-br
+                tag: 2
+                Interface veth-ns-4-br
+            Port br-2
+                Interface br-2
+                    type: internal
+            Port br-ovs2-1
+                Interface br-ovs2-1
+            Port br-ovs2-3
+                Interface br-ovs2-3
+        Bridge br-1
+            Controller "tcp:172.17.0.2:6653"
+                is_connected: true
+            Port br-ovs1-2
+                Interface br-ovs1-2
+            Port br-1
+                Interface br-1
+                    type: internal
+            Port veth-ns-2-br
+                tag: 2
+                Interface veth-ns-2-br
+            Port veth-ns-1-br
+                tag: 1
+                Interface veth-ns-1-br
+        Bridge br-4
+            Controller "tcp:172.17.0.2:6653"
+                is_connected: true
+            Port veth-ns-7-br
+                tag: 1
+                Interface veth-ns-7-br
+            Port veth-ns-8-br
+                tag: 2
+                Interface veth-ns-8-br
+            Port br-4
+                Interface br-4
+                    type: internal
+            Port br-ovs4-5
+                Interface br-ovs4-5
+            Port br-ovs4-3
+                Interface br-ovs4-3
+        Bridge br-5
+            Controller "tcp:172.17.0.2:6653"
+                is_connected: true
+            Port veth-ns-9-br
+                tag: 1
+                Interface veth-ns-9-br
+            Port br-5
+                Interface br-5
+                    type: internal
+            Port veth-ns-10-br
+                tag: 2
+                Interface veth-ns-10-br
+            Port br-ovs5-4
+                Interface br-ovs5-4
+        ovs_version: "2.13.5"
+    haibipeng@ubuntu:~/Downloads/SDN_demos/Demo4/Demo4_solutions_Haibi_Peng_875552/scripts$ sudo ip netns exec ns-1 ping -c 1 10.0.0.2
     PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+    64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=0.462 ms
 
     --- 10.0.0.2 ping statistics ---
-    1 packets transmitted, 0 received, 100% packet loss, time 0ms
-
+    1 packets transmitted, 1 received, 0% packet loss, time 0ms
+    rtt min/avg/max/mdev = 0.462/0.462/0.462/0.000 ms
+    haibipeng@ubuntu:~/Downloads/SDN_demos/Demo4/Demo4_solutions_Haibi_Peng_875552/scripts$ sudo ip netns exec ns-1 ping -c 1 10.0.0.3
     PING 10.0.0.3 (10.0.0.3) 56(84) bytes of data.
-    64 bytes from 10.0.0.3: icmp_seq=1 ttl=64 time=5.77 ms
+    64 bytes from 10.0.0.3: icmp_seq=1 ttl=64 time=7.08 ms
 
     --- 10.0.0.3 ping statistics ---
     1 packets transmitted, 1 received, 0% packet loss, time 0ms
-    rtt min/avg/max/mdev = 5.765/5.765/5.765/0.000 ms
+    rtt min/avg/max/mdev = 7.078/7.078/7.078/0.000 ms
+    haibipeng@ubuntu:~/Downloads/SDN_demos/Demo4/Demo4_solutions_Haibi_Peng_875552/scripts$ sudo ip netns exec ns-1 ping -c 1 10.0.0.4
+    PING 10.0.0.4 (10.0.0.4) 56(84) bytes of data.
+    64 bytes from 10.0.0.4: icmp_seq=1 ttl=64 time=8.64 ms
+
+    --- 10.0.0.4 ping statistics ---
+    1 packets transmitted, 1 received, 0% packet loss, time 0ms
+    rtt min/avg/max/mdev = 8.642/8.642/8.642/0.000 ms
+    haibipeng@ubuntu:~/Downloads/SDN_demos/Demo4/Demo4_solutions_Haibi_Peng_875552/scripts$ sudo ip netns exec ns-1 ping -c 1 10.0.0.5
+    PING 10.0.0.5 (10.0.0.5) 56(84) bytes of data.
+    64 bytes from 10.0.0.5: icmp_seq=1 ttl=64 time=11.0 ms
+
+    --- 10.0.0.5 ping statistics ---
+    1 packets transmitted, 1 received, 0% packet loss, time 0ms
+    rtt min/avg/max/mdev = 11.013/11.013/11.013/0.000 ms
     ```
 
 
@@ -409,3 +489,4 @@ Basically, the essence of the isolation is also to create flow entries that bloc
 
 # Reference
 1. [Open vSwitch Manual ovs-ofctl(8)](https://www.openvswitch.org/support/dist-docs-2.5/ovs-ofctl.8.txt)
+2. <a id="vlan">[Network namespaces](https://www.containerlabs.kubedaily.com/LXC/Linux%20Containers/Network_namespaces.html)</a>
